@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import sys  # <--- Added to allow stopping the workflow
 import google.generativeai as genai
 
 # --- 1. SETUP & CONFIGURATION ---
@@ -14,11 +15,12 @@ DETAILS_URL = f"https://github.com/{REPO_NAME}/actions/runs/{RUN_ID}"
 
 if not GITHUB_TOKEN or not GOOGLE_API_KEY:
     print("❌ Error: Secrets missing. Make sure GITHUB_TOKEN and GOOGLE_API_KEY are set in Settings > Secrets.")
-    exit(1)
+    sys.exit(1)
 
-# Configure Gemini (Using standard 1.5 Flash model)
+# Configure Gemini
+# Using the stable model version to avoid 404 errors
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash') 
 
 # --- 2. LOAD GITHUB WEBHOOK DATA ---
 def load_github_payload():
@@ -27,7 +29,7 @@ def load_github_payload():
     
     if not event_path or not os.path.exists(event_path):
         print(f"❌ Error: GITHUB_EVENT_PATH not found at {event_path}")
-        exit(1)
+        sys.exit(1)
 
     with open(event_path, 'r') as f:
         return json.load(f)
@@ -139,9 +141,13 @@ def run():
     if "⚠️ **REQUEST CHANGES**" in review:
         print("❌ Verdict: REQUEST CHANGES. Blocking merge.")
         update_pr_status(statuses_url, "failure", "AI found critical issues.")
+        # EXIT WITH ERROR to turn the GitHub Action Red
+        sys.exit(1)
+        
     elif "✅ **APPROVE**" in review:
         print("✅ Verdict: APPROVED. Green light.")
         update_pr_status(statuses_url, "success", "AI approved the changes.")
+        
     else:
         print("⚠️ Verdict inconclusive.")
         update_pr_status(statuses_url, "success", "AI Review posted (Neutral).")
