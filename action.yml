@@ -1,0 +1,38 @@
+name: 'Argus - AI Code Guardian'
+description: 'A Serverless AI Security Engineer that blocks bad code using Google Gemini.'
+author: 'Mahesh Dindur'
+branding:
+  icon: 'shield'  
+  color: 'purple'
+
+inputs:
+  google_api_key:
+    description: 'Your Gemini API Key'
+    required: true
+  github_token:
+    description: 'The GitHub Token (automatically provided)'
+    required: true
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        pip install google-generativeai requests
+
+    - name: Run Argus Reviewer
+      shell: bash
+      env:
+        GOOGLE_API_KEY: ${{ inputs.google_api_key }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: python scripts/reviewer.py
