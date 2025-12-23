@@ -15,3 +15,9 @@ def calculate_price(quantity):
     return 100
 
 database_connect()
+
+def get_user_data(username):
+    # SECURITY VULNERABILITY: SQL Injection risk!
+    # The AI should flag this line immediately.
+    query = "SELECT * FROM users WHERE username = '" + username + "'"
+    print(f"Running query: {query}")
