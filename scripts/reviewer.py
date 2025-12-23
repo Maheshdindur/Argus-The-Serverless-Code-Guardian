@@ -18,7 +18,7 @@ if not GITHUB_TOKEN or not GOOGLE_API_KEY:
 
 # Configure Gemini (Using standard 1.5 Flash model)
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # --- 2. LOAD GITHUB WEBHOOK DATA ---
 def load_github_payload():
