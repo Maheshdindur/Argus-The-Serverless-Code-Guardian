@@ -1,14 +1,18 @@
 name: 'Argus - AI Code Guardian'
-description: 'A Serverless AI Security Engineer that blocks bad code using Google Gemini.'
+description: 'A Serverless AI Security Engineer that blocks bad code using Groq.'
 author: 'Mahesh Dindur'
 branding:
   icon: 'shield'  
   color: 'purple'
 
 inputs:
-  google_api_key:
-    description: 'Your Gemini API Key'
+  groq_api_key:
+    description: 'Your Groq API Key'
     required: true
+  groq_model:
+    description: 'Groq model used for PR review'
+    required: false
+    default: 'llama-3.1-8b-instant'
   github_token:
     description: 'The GitHub Token (automatically provided)'
     required: true
@@ -28,11 +32,12 @@ runs:
     - name: Install Dependencies
       shell: bash
       run: |
-        pip install google-generativeai requests
+        pip install groq requests
 
     - name: Run Argus Reviewer
       shell: bash
       env:
-        GOOGLE_API_KEY: ${{ inputs.google_api_key }}
+        GROQ_API_KEY: ${{ inputs.groq_api_key }}
+        GROQ_MODEL: ${{ inputs.groq_model }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
-      run: python scripts/reviewer.py
+      run: python "$GITHUB_ACTION_PATH/scripts/reviewer.py"

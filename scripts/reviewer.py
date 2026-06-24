@@ -2,25 +2,24 @@ import os
 import json
 import requests
 import sys  # <--- Added to allow stopping the workflow
-import google.generativeai as genai
+from groq import Groq
 
 # --- 1. SETUP & CONFIGURATION ---
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
 
 # Get the link to the current GitHub Actions Run (for status checks)
 RUN_ID = os.environ.get("GITHUB_RUN_ID")
 REPO_NAME = os.environ.get("GITHUB_REPOSITORY")
 DETAILS_URL = f"https://github.com/{REPO_NAME}/actions/runs/{RUN_ID}"
 
-if not GITHUB_TOKEN or not GOOGLE_API_KEY:
-    print("❌ Error: Secrets missing. Make sure GITHUB_TOKEN and GOOGLE_API_KEY are set in Settings > Secrets.")
+if not GITHUB_TOKEN or not GROQ_API_KEY:
+    print("❌ Error: Secrets missing. Make sure GITHUB_TOKEN and GROQ_API_KEY are set in Settings > Secrets.")
     sys.exit(1)
 
-# Configure Gemini
-# Using the stable model version to avoid 404 errors
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash') 
+# Configure Groq
+client = Groq(api_key=GROQ_API_KEY)
 
 # --- 2. LOAD GITHUB WEBHOOK DATA ---
 def load_github_payload():
@@ -74,8 +73,8 @@ def get_pr_diff(diff_url):
     response = requests.get(diff_url, headers=headers)
     return response.text if response.status_code == 200 else None
 
-def analyze_code_with_gemini(diff_text, pr_title, user):
-    """Sends the code diff to Gemini for analysis."""
+def analyze_code_with_groq(diff_text, pr_title, user):
+    """Sends the code diff to Groq for analysis."""
     # Truncate if too huge to prevent token errors
     if len(diff_text) > 40000:
         diff_text = diff_text[:40000] + "\n... (Diff truncated for size)"
@@ -100,10 +99,24 @@ def analyze_code_with_gemini(diff_text, pr_title, user):
     """
     
     try:
-        response = model.generate_content(prompt)
-        return response.text
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are Argus, a concise senior software engineer reviewing pull requests.",
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            temperature=0.2,
+            max_completion_tokens=2048,
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        return f"⚠️ **AI Error:** Gemini failed to respond. Details: {str(e)}"
+        return f"⚠️ **AI Error:** Groq failed to respond. Details: {str(e)}"
 
 # --- 4. MAIN EXECUTION ---
 def run():
@@ -130,9 +143,9 @@ def run():
         print("❌ Could not retrieve code diff. Exiting.")
         return
 
-    # 4. Ask Gemini
-    print("🧠 Sending code to Gemini...")
-    review = analyze_code_with_gemini(code_diff, pr_title, user)
+    # 4. Ask Groq
+    print(f"🧠 Sending code to Groq ({GROQ_MODEL})...")
+    review = analyze_code_with_groq(code_diff, pr_title, user)
 
     # 5. Post the Result
     post_comment(comments_url, review)

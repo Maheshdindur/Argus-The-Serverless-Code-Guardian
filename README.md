@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.9-blue?style=for-the-badge&logo=python)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Serverless-2088FF?style=for-the-badge&logo=github-actions)
-![Gemini AI](https://img.shields.io/badge/AI-Google_Gemini_2.5-8E75B2?style=for-the-badge)
+![Groq AI](https://img.shields.io/badge/AI-Groq_Llama-FF6B00?style=for-the-badge)
 
 > **"A fully automated, serverless AI Code Reviewer that lives inside your GitHub Actions pipeline."**
 
@@ -19,7 +19,7 @@ Argus eliminates the need for expensive servers, webhooks, or complex Docker con
 
 1.  **Trigger:** A developer opens or updates a Pull Request.
 2.  **Action:** GitHub spins up a temporary runner and executes the Argus script.
-3.  **Analysis:** The code "diff" is retrieved and sent to **Google Gemini (2.5 Flash)** for deep analysis.
+3.  **Analysis:** The code "diff" is retrieved and sent to **Groq** for deep analysis.
 4.  **Verdict:**
     * ✅ **APPROVE:** If code is clean, Argus posts a "Success" comment.
     * ⚠️ **REQUEST CHANGES:** If bugs are found, Argus **blocks the merge** and posts a review explaining the fix.
@@ -31,12 +31,12 @@ Argus eliminates the need for expensive servers, webhooks, or complex Docker con
 
 You do not need to modify your application code to use Argus. Just follow these steps to add the workflow to your repository:
 
-### 1. Get a Gemini API Key
-Obtain a free API key from [Google AI Studio](https://aistudio.google.com/).
+### 1. Get a Groq API Key
+Obtain an API key from [GroqCloud](https://console.groq.com/keys).
 
 ### 2. Add Secrets to GitHub
 Go to your repository **Settings** > **Secrets and variables** > **Actions** and add:
-* `GOOGLE_API_KEY`: Paste your Gemini API key here.
+* `GROQ_API_KEY`: Paste your Groq API key here.
 * `GITHUB_TOKEN`: (Optional) GitHub usually provides this automatically, but ensure workflow permissions are enabled.
 
 ### 3. Create the Workflow
@@ -52,29 +52,23 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
+  statuses: write
 
 jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Run Argus AI Reviewer
+        uses: Maheshdindur/Argus-The-Serverless-Code-Guardian@main
         with:
-          python-version: '3.9'
-
-      - name: Install Dependencies
-        run: pip install google-generativeai requests
-
-      - name: Run AI Reviewer
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-        run: python scripts/reviewer.py
+          groq_api_key: ${{ secrets.GROQ_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional. Default is llama-3.1-8b-instant.
+          groq_model: llama-3.1-8b-instant
 ```
+
+For a stable Marketplace install, replace `@main` with your published release tag, for example `@v1`.
 
 ## 🛠️ Architecture
 
@@ -82,7 +76,7 @@ jobs:
 graph LR
     A[Developer Opens PR] -->|Trigger| B(GitHub Actions);
     B -->|Read Code Diff| C{Argus Python Script};
-    C -->|API Call| D[Google Gemini AI];
+    C -->|API Call| D[Groq AI];
     D -->|Analysis Result| C;
     C -->|Post Comment| E[Pull Request];
     C -->|Block Merge| F[Branch Protection];
