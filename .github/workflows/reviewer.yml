@@ -1,31 +1,20 @@
-name: AI Code Reviewer
+name: Argus PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
-  review:
+  argus-review:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Run Argus
+        uses: Maheshdindur/Argus-The-Serverless-Code-Guardian@v1
         with:
-          python-version: '3.9'
-
-      - name: Install Dependencies
-        run: pip install google-generativeai requests
-
-      - name: Run AI Reviewer
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-        run: python scripts/reviewer.py
+          groq_api_key: ${{ secrets.GROQ_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
